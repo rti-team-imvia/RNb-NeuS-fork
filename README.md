@@ -16,6 +16,8 @@ This is the official implementation of **RNb-NeuS: Reflectance and Normal-based 
 ----------------------------------------
 ## Installation
 
+dvd: Python version: 3.9.13
+
 ```shell
 git clone https://github.com/bbrument/RNb-NeuS.git
 cd RNb-NeuS

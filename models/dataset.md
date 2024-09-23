@@ -1,0 +1,81 @@
+# Datasets (`datasets.py`)
+
+The `datasets.py` file in this repository is responsible for loading and managing 3D scene data, including images, masks, normals, and camera parameters, which are essential for training and rendering neural networks such as NeRF-based models. This file contains utility functions to preprocess and organize the data, making it suitable for neural rendering and other tasks requiring camera and lighting manipulation.
+
+## Key Components:
+
+### 1. Loading Camera Parameters and Projection Matrices
+
+The utility function `load_K_Rt_from_P` is used to decompose the projection matrix `P` into the intrinsic matrix `K`, rotation matrix `R`, and translation vector `t`. These decomposed matrices are crucial for setting up the camera's intrinsic parameters and pose in 3D space.
+
+- **`load_K_Rt_from_P`**: This function takes a projection matrix and decomposes it into:
+  - `K`: The intrinsic matrix that defines the camera's focal length and principal point.
+  - `R`: The rotation matrix representing the camera's orientation.
+  - `t`: The translation vector indicating the camera's position in world space.
+
+### 2. Image and Normal Loading
+
+Functions are provided to load images and surface normals in a format that can be used for further processing or neural rendering:
+
+- **`load_image(path)`**: Loads an image from the given path, converting it to RGB format and normalizing the pixel values between 0 and 1.
+- **`load_normal(path)`**: Loads a normal map image, transforming it into a format with values in the range `[-1, 1]` (useful for surface normal representation).
+- **`save_image(path, image, bit_depth)`**: Saves an image with the specified bit depth, ensuring correct format and compression.
+- **`save_normal(path, normal, bit_depth)`**: Saves a normal map, converting it back to the appropriate image format.
+
+### 3. `Dataset` Class
+
+The `Dataset` class is designed to manage all data related to the 3D scene, including images, normals, masks, camera parameters, and lighting directions. It efficiently loads data, handles coordinate transformations, and prepares the input required for neural rendering models.
+
+#### Initialization (`__init__`):
+The dataset is initialized by loading:
+
+- **Images**: RGB images from the specified directories.
+- **Normals**: Surface normals used for shading and lighting computations.
+- **Albedos**: Surface albedo maps (if available) to compute the object's appearance under different lighting conditions.
+- **Masks**: Binary masks to isolate objects in the scene from the background.
+- **Camera Parameters**: Intrinsics, extrinsics (pose), and projection matrices for each camera view.
+- **Light Directions**: Generates light directions in both camera and world space to simulate various lighting effects.
+
+The class also computes bounding boxes for the objects in the scene, which are important for determining the area of interest when rendering or reconstructing the scene.
+
+#### Camera and Light Handling:
+
+- **`gen_light_directions`**: Generates lighting directions for simulating illumination on the object in the scene. Depending on the normal vectors, it computes the lighting directions in either the camera or world space.
+- **`gen_rays_at`**: Generates rays from the camera through each pixel, which are essential for rendering or ray tracing. This function generates rays in world space based on camera intrinsics and extrinsics.
+- **`gen_rays_between`**: Interpolates between two camera views to create rays from intermediate viewpoints. This is particularly useful for rendering novel views in neural rendering applications.
+
+#### Random Ray Generation:
+
+- **`ps_gen_random_rays_at_view_on_all_lights`**: Generates random rays for a specific view with all lighting conditions considered. This function is useful for training tasks that require randomly sampled rays and pixels.
+- **`gen_random_rays_at`**: Generates random rays from a single camera view, sampling rays and colors from randomly chosen pixels in the image. These rays are used for tasks like training neural networks that need stochastic sampling.
+
+#### Ray-Sphere Intersection:
+
+- **`near_far_from_sphere`**: This function computes the near and far intersections of rays with a unit sphere, which is important for determining the valid depth ranges when rendering a 3D scene.
+
+#### Image and Normal Retrieval:
+
+- **`image_at`**: Retrieves and resizes an image at a specified resolution level.
+- **`normal_at`**: Retrieves and resizes the normal map for a specific image index, converting it to world coordinates using the camera pose.
+
+### 4. Handling Light Directions
+
+The class handles light direction computations in both the camera and world spaces:
+
+- **`gen_light_directions()`**: Computes the lighting directions for each image in the dataset, transforming them into either camera or world space depending on the application.
+
+### 5. Positional Encoding and Ray Management
+
+The rays generated by the `Dataset` class are typically used as inputs to neural rendering models, which trace rays through the scene and compute how light interacts with surfaces. The `Dataset` class handles all the necessary transformations from pixel space to world space for efficient ray-based rendering.
+
+## Summary:
+
+The `datasets.py` file is a critical component of this repository, enabling the loading, processing, and management of 3D scene data. The key functionality includes:
+
+- Loading and processing images, masks, normals, and camera parameters.
+- Managing camera intrinsics and extrinsics for 3D to 2D projection and ray tracing.
+- Generating lighting directions and handling light transformations for rendering.
+- Providing utility functions to generate rays and handle interpolations between camera views, which is essential for rendering novel views and simulating different lighting conditions.
+- Preparing data in an efficient manner to be consumed by neural rendering models.
+
+This file acts as the backbone for data preprocessing, allowing neural networks to operate effectively on the 3D data for tasks such as scene reconstruction, view synthesis, or novel rendering.

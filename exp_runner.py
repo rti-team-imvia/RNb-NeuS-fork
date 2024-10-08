@@ -137,6 +137,11 @@ class Runner:
                                 no_albedo=self.no_albedo)
                 
             else:
+                # DVD(2024/09/27) start: To avoid error with GPU/CPU
+                pixels_y = pixels_y.cpu()
+                pixels_x = pixels_x.cpu()
+                # DVD(2024/09/27) end
+
                 lights_dir = self.dataset.light_directions[cbn, :, pixels_y, pixels_x, :].cuda() # [n_lights, batch_size, 3]
                 lights_dir = lights_dir.reshape(self.dataset.n_lights,self.batch_size,1,3)
 
@@ -144,7 +149,7 @@ class Runner:
                                 background_rgb=background_rgb,
                                 cos_anneal_ratio=self.get_cos_anneal_ratio(),
                                 no_albedo=self.no_albedo)
-            
+
             color_fine = render_out['color_fine']
             s_val = render_out['s_val']
             cdf_fine = render_out['cdf_fine']
@@ -297,6 +302,10 @@ class Runner:
                                 no_albedo=self.no_albedo)
                 
             else:
+                # DVD(2024/09/26) start: To avoid error with GPU/CPU
+                pixels_x_batch = pixels_x_batch.cpu()
+                pixels_y_batch = pixels_y_batch.cpu()
+                # DVD(2024/09/26) end
                 lights_dir = self.dataset.light_directions[idv, idl, pixels_y_batch, pixels_x_batch, :].cuda().unsqueeze(0)
                 render_out = self.renderer.render_rnb(rays_o_batch, rays_d_batch, near, far, lights_dir,
                                 background_rgb=background_rgb,

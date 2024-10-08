@@ -16,15 +16,32 @@ This is the official implementation of **RNb-NeuS: Reflectance and Normal-based 
 ----------------------------------------
 ## Installation
 
-dvd: Python version: 3.9.13
+dvd(2024/09/25): Python version: 3.9.13
 
 ```shell
 git clone https://github.com/bbrument/RNb-NeuS.git
 cd RNb-NeuS
-pip install -r requirements.txt
+pyenv local 3.11.3 # If using pyenv only
+python -m venv .venv
+source .venv/Scripts/activate
+python -m pip install --upgrade pip
+pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+pip install opencv-python-headless
+pip install trimesh
+pip install tensorboard
+pip install tqdm
+pip install pyhocon
+pip install icecream
+pip install scipy
+pip install PyMCubes==0.1.6
 ```
 
 ## Usage
+
+dvd(2024/09/28): Python version: 3.9.13
+```shell
+
+```
 
 #### Data Convention
 

@@ -111,7 +111,10 @@ def compare_cameras_npz(PATH_TO_SAVE_CAMERAS_NPZ, PATH_TO_ORIG_CAMERAS_NPZ):
 
 
 def preprocess_cameras(PATH_TO_SAVE_CAMERAS_NPZ):
-    pass
+    number_of_normalization_points = 100
+    cameras_filename = "cameras"
+
+
 
 if __name__ == "__main__":
 
@@ -128,5 +131,7 @@ if __name__ == "__main__":
     # compare_cameras_npz(PATH_TO_SAVE_CAMERAS_NPZ, PAT_TO_ORIG_CAMERAS_NPZ)
 
     # Replicate preprocess_cameras.py 
-
+    # It can be done by running the example:
+    # python preprocess/preprocess_cameras.py --source_dir C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG
+    # Where it should find the cameras.npz file generated previously in this script with the function get_cameras_npz
     preprocess_cameras(PATH_TO_SAVE_CAMERAS_NPZ)

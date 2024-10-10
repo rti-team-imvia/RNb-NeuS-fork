@@ -119,16 +119,16 @@ def preprocess_cameras(PATH_TO_SAVE_CAMERAS_NPZ):
 if __name__ == "__main__":
 
     # From the original Calib_Results.mat file create cameras.npz file
-    PATH_TO_CALIB_RESULTS_MAT = r'C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG/Calib_Results.mat'
-    PATH_TO_SAVE_CAMERAS_NPZ = r'C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG/'
+    PATH_TO_CALIB_RESULTS_MAT = r'C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG_tests/Calib_Results.mat'
+    PATH_TO_SAVE_CAMERAS_NPZ = r'C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG_tests/'
     get_cameras_npz(PATH_TO_CALIB_RESULTS_MAT, PATH_TO_SAVE_CAMERAS_NPZ)
 
     # # See the content of the cameras.npz file
     # load_cameras_npz(PATH_TO_SAVE_CAMERAS_NPZ)
 
     # # Compare the cameras.npz file with the original cameras.npz file
-    # PAT_TO_ORIG_CAMERAS_NPZ = r'C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG'
-    # compare_cameras_npz(PATH_TO_SAVE_CAMERAS_NPZ, PAT_TO_ORIG_CAMERAS_NPZ)
+    PAT_TO_ORIG_CAMERAS_NPZ = r'C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG_tests'
+    compare_cameras_npz(PATH_TO_SAVE_CAMERAS_NPZ, PAT_TO_ORIG_CAMERAS_NPZ)
 
     # Replicate preprocess_cameras.py 
     # It can be done by running the example:

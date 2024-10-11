@@ -36,6 +36,21 @@ pip install scipy
 pip install PyMCubes==0.1.6
 ```
 
+dvd(2024/10/11): For cluster
+```shell
+qlogin -q gpu
+module load python # Check which version with module avail python
+python -m venv .venv
+source .venv/bin/activate
+
+/work/imvia/de1450bo/repos/RNb-NeuS-fork/.venv/bin/python -m pip install --upgrade pip
+/work/imvia/de1450bo/repos/RNb-NeuS-fork/.venv/bin/python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+/work/imvia/de1450bo/repos/RNb-NeuS-fork/.venv/bin/python -m pip install opencv-python-headless trimesh tensorboard tqdm pyhocon icecream scipy PyMCubes==0.1.6
+
+# exp_runner.py example:
+/work/imvia/de1450bo/repos/RNb-NeuS-fork/.venv/bin/python exp_runner.py --mode train_rnb --conf ./confs/wmask_rnb.conf --case bearPNG_002
+```
+
 ## Usage
 
 dvd(2024/09/28): Python version: 3.9.13

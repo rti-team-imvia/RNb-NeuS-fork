@@ -498,3 +498,10 @@ if __name__ == '__main__':
     elif args.mode == "validate_image_ps" :
         runner = Runner(args.conf, args.mode, args.case, args.is_continue, args.no_albedo)
         runner.validate_image_ps()
+
+# Train with reflectance
+# python exp_runner.py --mode train_rnb --conf ./confs/CONF_NAME.conf --case CASE_NAME
+# Train without reflectance
+# python exp_runner.py --mode train_rnb --conf ./confs/CONF_NAME.conf --case CASE_NAME --no_albedo
+# Extract surface
+# python exp_runner.py --mode validate_mesh --conf ./confs/CONF_NAME.conf --case CASE_NAME --is_continue

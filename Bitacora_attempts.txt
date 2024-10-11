@@ -52,7 +52,15 @@ it is learning something, or at least this folder seems to be showing us that, t
 Comments: Next step could be debug the code so we can see what is the problem with the mesh. However at this point I started to replicate the full process of preprocessing using bearPNG.
 The hypotesis is if I am capable to reproduce the pre-processing in the bearPNG from the original data then I can use this same procedure in our data.
 
-===> bearPNG 001 (2024/10/10) Input original data from RNb-NeuS bearPNG Output in C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/exp/bearPNG_cluster_20241010
+===> bearPNG 001 (2024/10/10) Input original data from RNb-NeuS bearPNG Output in C:/Users/Deivid/Documents/rti-data/Palermo_3D/3D/out/bearPNG_001
 Results: Worked as expected. So the Cluster can be used to perform the training normally.
 
-
+===> bearPNG 002 (2024/10/10) Output in C:/Users/Deivid/Documents/rti-data/Palermo_3D/3D/out/bearPNG_002
+=>Data: 1) Original bearPNG data from DiLiGenT-MV. 2) Used SDM-UniPS to get normals and albedo using their masks
+=>Hypotesis: If the reconstruction of bearPNG without reflectance scaling is as good as bearPNG with reflectance scaling then we could skip this scaling process too in our data, right?.
+=>Masks: Same as DiLiGenT-MV (I could swear it is the same as RNb-NeuS too, why bother to use another method, right?)
+=>Normals: Output of SDM-UniPS performed by me (they are really close to the ones used by RNb-NeuS). The slightly difference might be for the 10 images RNb-NeuS took when using SDM-UniPS (different than mine I imagine)
+=>Albedo: Output of SDM-UniPS performed by me, they are not scaled but they are really similar. When using compare_images_similarities.py in 000.png I have: MSE: 11.06, Coordinates: (320, 166), RNB-NeuS Pixel Value: [ 69 115  40], Ours: [ 80 131  43],	Difference Pixel Value: [11 16  3]
+=>cameras.npz: File given by RNb-NeuS
+=>Results:
+=>Comments:

@@ -127,3 +127,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+# python cheminova/organize_DiLiGenT-MV_to_RNB.py --input "C:/Users/Deivid/Documents/DiLiGenT-MV/DiLiGenT-MV/mvpmsData/bearPNG" --output "C:/Users/Deivid/Documents/rti-data/Palermo_3D/3D"

@@ -62,5 +62,16 @@ Results: Worked as expected. So the Cluster can be used to perform the training 
 =>Normals: Output of SDM-UniPS performed by me (they are really close to the ones used by RNb-NeuS). The slightly difference might be for the 10 images RNb-NeuS took when using SDM-UniPS (different than mine I imagine)
 =>Albedo: Output of SDM-UniPS performed by me, they are not scaled but they are really similar. When using compare_images_similarities.py in 000.png I have: MSE: 11.06, Coordinates: (320, 166), RNB-NeuS Pixel Value: [ 69 115  40], Ours: [ 80 131  43],	Difference Pixel Value: [11 16  3]
 =>cameras.npz: File given by RNb-NeuS
-=>Results:
-=>Comments:
+=>Results: When comparing bearPNG_001 (bearPNG) and current bearPNG_002 we can visually conclude that we get almost the same mesh (also the validations_fine shows a similar output)
+=>Comments: We can assume that the reflectance scaling is not neccesary although bearPNG is a really simple mesh in therms of color (single color) so perhaps head_cs might need scaling. On the other hand authors say:  "if the camera’s response and the illumi-
+nation were known i.e., a calibrated PS method was used in Step 1 (Computing normals and reflectance), then the reflectance would be determined without scale ambiguity and this step could be skipped"
+
+===> head_cs_004 (2024/10/12) Input: F:\dvd\Palermo_3D\3D\in\head_cs_3D_in_004. Output: F:\dvd\Palermo_3D\3D\out\head_cs_004
+=>Data: I used all the data, hoping the code does not crash this time with the new content of cameras.npz
+=>Hypothesis: Replacing the scale matrices in cameras.npz file with the identidy matrix might let the code to run 
+=>Masks: Generated on LIGHT.jpg
+=>Normals: SDM_out\normal.png unchanged (However before we did not use SDM with masks so from now on the background was removed)
+=>Albedo: SDM_out\baseColor.png unchanged (However before we did not use SDM with masks so from now on the background was removed)
+=>camera.npz: Created with wfsm and then using sfm_camera_txt_file_to_npz.py
+=>Results: The new cameras.npz file ran without problems so we can use it as input, it gave a mesh as output too. However the results are noise?, based on the validations_fine it seems like it could improve with more epochs so I changed to 600K iterations.
+=>Comments: Waiting for the results after 600K

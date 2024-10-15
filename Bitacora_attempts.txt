@@ -75,3 +75,13 @@ nation were known i.e., a calibrated PS method was used in Step 1 (Computing nor
 =>camera.npz: Created with wfsm and then using sfm_camera_txt_file_to_npz.py
 =>Results: The new cameras.npz file ran without problems so we can use it as input, it gave a mesh as output too. However the results are noise?, based on the validations_fine it seems like it could improve with more epochs so I changed to 600K iterations.
 =>Comments: Waiting for the results after 600K
+
+===>bearPNG_003 (2024/10/15) Output in C:/Users/Deivid/Documents/rti-data/Palermo_3D/3D/out/bearPNG_003
+=>Data: 1) Original bearPNG data from DiLiGenT-MV. 2) Used SDM-UniPS to get normals and albedo using their masks
+=>Hypotesis: Using cameras_vsfm_head_cs_20.npz (cameras.npz created from head_cs using wsfm and sfm_camera_txt_file_to_npz.py but only the first 20 images) might give us insights about how is going wrong with the way we create the cameras.npz file
+=>Masks: Same as DiLiGenT-MV (I could swear it is the same as RNb-NeuS too, why bother to use another method, right?)
+=>Normals: Output of SDM-UniPS computed in-house (they are really close to the ones used by RNb-NeuS). The slightly difference might be for the 10 images RNb-NeuS took when using SDM-UniPS (different than mine I imagine)
+=>Albedo: Output of SDM-UniPS computed in-house, they are not scaled but they are really similar. When using compare_images_similarities.py in 000.png I have: MSE: 11.06, Coordinates: (320, 166), RNB-NeuS Pixel Value: [ 69 115  40], Ours: [ 80 131  43],	Difference Pixel Value: [11 16  3]
+=>cameras.npz: cameras_vsfm_head_cs_20.npz: Created from head_cs using wsfm and sfm_camera_txt_file_to_npz.py. Then I removed the last 5 values in order to get 20 (the number of images of bearPNG)
+=>Results: 
+=>Comments: 

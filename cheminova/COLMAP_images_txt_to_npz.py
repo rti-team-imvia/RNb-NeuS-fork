@@ -1,5 +1,8 @@
 import numpy as np
 
+WORLD_MAP_DIVIDED_BY_10 = True
+SCALE_MAP_SAME_AS_BEAR = False
+
 def quaternion_to_matrix(qw, qx, qy, qz, tx, ty, tz):
     # Compute the rotation matrix from quaternion
     r11 = 1 - 2*qy**2 - 2*qz**2
@@ -11,15 +14,24 @@ def quaternion_to_matrix(qw, qx, qy, qz, tx, ty, tz):
     r31 = 2*qx*qz - 2*qy*qw
     r32 = 2*qy*qz + 2*qx*qw
     r33 = 1 - 2*qx**2 - 2*qy**2
-    
-    # World matrix
-    world_mat = np.array([
-        [r11, r12, r13, tx],
-        [r21, r22, r23, ty],
-        [r31, r32, r33, tz],
-        [0, 0, 0, 1]
-    ])
-    
+
+    if WORLD_MAP_DIVIDED_BY_10:
+        # World Matrix with last column divided by 10
+        world_mat = np.array([
+            [r11, r12, r13, tx/10],
+            [r21, r22, r23, ty/10],
+            [r31, r32, r33, tz/10],
+            [0, 0, 0, 1]
+        ])    
+    else:
+        # World matrix
+        world_mat = np.array([
+            [r11, r12, r13, tx],
+            [r21, r22, r23, ty],
+            [r31, r32, r33, tz],
+            [0, 0, 0, 1]
+        ])
+
     return world_mat
 
 def process_images_txt(input_file, output_file):
@@ -49,15 +61,25 @@ def process_images_txt(input_file, output_file):
 
         # Step 4: Create the world matrix for this image
         world_mat = quaternion_to_matrix(qw, qx, qy, qz, tx, ty, tz)
-        
-        # Create the scale matrix (identity matrix with 1s and a translation factor of 1 in the last column)
-        scale_mat = np.array([
-            [1, 0, 0, 1],
-            [0, 1, 0, 1],
-            [0, 0, 1, 1],
-            [0, 0, 0, 1]
-        ])
-        
+
+        if SCALE_MAP_SAME_AS_BEAR:
+            # Use the same scale matrix as in bearPNG
+            scale_mat = np.array([
+                [84.4945297241211, 0, 0, 87.13922119140625],
+                [0, 84.4945297241211, 0, 83.05925750732422],
+                [0, 0, 84.4945297241211, 36.135494232177734],
+                [0, 0, 0, 1]
+            ])            
+
+        else:
+            # Create the scale matrix (identity matrix with 1s and a translation factor of 1 in the last column)
+            scale_mat = np.array([
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1]
+            ])
+
         # Store matrices at the correct index
         world_mats[image_index] = world_mat
         scale_mats[image_index] = scale_mat
@@ -73,7 +95,7 @@ def process_images_txt(input_file, output_file):
 
 # File paths
 input_file = r'C:/Users/Deivid/Documents/rti-data/Palermo_3D/3D/COLMAP_in/head_cs/shared_intrinsics/sparse/0/images.txt'
-output_file = 'cameras_COLMAP_head_cs.npz'
+output_file = r'C:/Users/Deivid/Documents/rti-data/Palermo_3D/3D/in/head_cs_3D_in_008/cameras_COLMAP_head_cs_v2.npz'
 
 # Process the file and create cameras.npz
 process_images_txt(input_file, output_file)

@@ -89,7 +89,7 @@ def get_cameras_npz_pt1_from_Calib_Results_mat(PATH_TO_CALIB_RESULTS_MAT, PATH_T
 
     # Save the projection matrices to a .npz file named 'cameras.npz'
     # The **proj_dict unpacks the dictionary, saving each projection matrix as a separate array in the .npz file
-    np.savez(os.path.join(PATH_TO_SAVE_CAMERAS_NPZ, "cameras_pt1.npz"), **proj_dict)
+    np.savez(os.path.join(PATH_TO_SAVE_CAMERAS_NPZ, "cameras_v1.npz"), **proj_dict)
 
 def get_all_mask_points(masks_dir):
     # Use the helper function 'glob_imgs' to retrieve all image files (masks) from the specified directory.
@@ -275,7 +275,7 @@ if __name__ == "__main__":
     # PART 1: Get World_mat from Calib_Results.mat
     # From the original Calib_Results.mat file create cameras.npz file
     PATH_TO_CALIB_RESULTS_MAT = r'C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG_tests/Calib_Results.mat'
-    PATH_TO_SAVE_CAMERAS_NPZ = r'C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG_tests/'
+    PATH_TO_SAVE_CAMERAS_NPZ = r'C:/Users/Deivid/OneDrive - Université de Bourgogne/3D/in/head_cs_3D_in_010'
     get_cameras_npz_pt1_from_Calib_Results_mat(PATH_TO_CALIB_RESULTS_MAT, PATH_TO_SAVE_CAMERAS_NPZ)
 
     # PART 2: Get scale_mat from masks
@@ -283,5 +283,5 @@ if __name__ == "__main__":
     # It can be done by running the example:
     # python preprocess/preprocess_cameras.py --source_dir C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG
     # Where it should find the cameras.npz file generated previously in this script with the function get_cameras_npz
-    source_dir = PATH_TO_SAVE_CAMERAS_NPZ
+    source_dir = r"C:/Users/Deivid/OneDrive - Université de Bourgogne/3D/in/head_cs_3D_in_010"
     preprocess_cameras(PATH_TO_SAVE_CAMERAS_NPZ, source_dir)

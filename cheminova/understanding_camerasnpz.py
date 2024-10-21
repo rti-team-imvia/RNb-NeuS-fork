@@ -275,7 +275,7 @@ if __name__ == "__main__":
     # PART 1: Get World_mat from Calib_Results.mat
     # From the original Calib_Results.mat file create cameras.npz file
     PATH_TO_CALIB_RESULTS_MAT = r'C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG_tests/Calib_Results.mat'
-    PATH_TO_SAVE_CAMERAS_NPZ = r'C:/Users/Deivid/OneDrive - Université de Bourgogne/3D/in/head_cs_3D_in_010'
+    PATH_TO_SAVE_CAMERAS_NPZ = r'C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG_tests/'
     get_cameras_npz_pt1_from_Calib_Results_mat(PATH_TO_CALIB_RESULTS_MAT, PATH_TO_SAVE_CAMERAS_NPZ)
 
     # PART 2: Get scale_mat from masks
@@ -283,5 +283,5 @@ if __name__ == "__main__":
     # It can be done by running the example:
     # python preprocess/preprocess_cameras.py --source_dir C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG
     # Where it should find the cameras.npz file generated previously in this script with the function get_cameras_npz
-    source_dir = r"C:/Users/Deivid/OneDrive - Université de Bourgogne/3D/in/head_cs_3D_in_010"
+    source_dir = PATH_TO_SAVE_CAMERAS_NPZ
     preprocess_cameras(PATH_TO_SAVE_CAMERAS_NPZ, source_dir)

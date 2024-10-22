@@ -1,6 +1,10 @@
 import numpy as np
 import os
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from understanding_camerasnpz import preprocess_cameras
+import matplotlib
+matplotlib.use('TkAgg')
 
 # Define a rotation matrix around the Y-axis (clockwise in steps of 15 degrees)
 def rotation_matrix_y(angle_degrees):
@@ -12,6 +16,72 @@ def rotation_matrix_y(angle_degrees):
         [0, 1, 0],
         [-sin_angle, 0, cos_angle]
     ], dtype=float)
+
+def draw_camera(ax, R, T, size=0.1, label=None):
+    """
+    Draw a camera as a cube with an X on the front face to represent the lens.
+    R: Rotation matrix (3x3)
+    T: Translation vector (3x1)
+    size: Size of the camera cube
+    label: Label for the camera (optional)
+    """
+    # Define a cube centered at the origin
+    cube = np.array([[-1, -1, -1],
+                     [1, -1, -1],
+                     [1, 1, -1],
+                     [-1, 1, -1],
+                     [-1, -1, 1],
+                     [1, -1, 1],
+                     [1, 1, 1],
+                     [-1, 1, 1]]) * size / 2
+
+    # Define faces of the cube
+    faces = [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [2, 3, 7, 6], [1, 2, 6, 5], [0, 3, 7, 4]]
+    
+    # Rotate and translate the cube according to R and T
+    cube_transformed = cube @ R.T + T.T
+    
+    # Draw the cube
+    ax.add_collection3d(Poly3DCollection([cube_transformed[face] for face in faces], facecolors='cyan', edgecolors='r', linewidths=1, alpha=0.25))
+
+    # Draw the "X" on the front face to represent the lens
+    front_face = cube_transformed[:4]  # First four vertices are the front face
+    ax.plot([front_face[0, 0], front_face[2, 0]], [front_face[0, 1], front_face[2, 1]], [front_face[0, 2], front_face[2, 2]], 'r-')
+    ax.plot([front_face[1, 0], front_face[3, 0]], [front_face[1, 1], front_face[3, 1]], [front_face[1, 2], front_face[3, 2]], 'r-')
+
+    # Optional label for the camera
+    if label:
+        ax.text(T[0], T[1], T[2], label, color='black')
+
+def visualize_camera_positions(RT_w2c_mats, object_position=[0, 0, 0]):
+    """
+    Visualize the position and orientation of the cameras.
+    RT_w2c_mats: List of extrinsic matrices for each camera
+    object_position: The fixed position of the object (default is at the origin)
+    """
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    
+    # Set up plot limits
+    ax.set_xlim([-1, 1])
+    ax.set_ylim([-1, 1])
+    ax.set_zlim([-1, 1])
+    
+    # Plot the object at the center (fixed object)
+    ax.scatter(object_position[0], object_position[1], object_position[2], c='r', marker='o', s=100, label="Object")
+
+    # Plot each camera in the list
+    for idx, RT in enumerate(RT_w2c_mats):
+        R = RT[:3, :3]  # Extract the rotation matrix (3x3)
+        T = RT[:3, 3]   # Extract the translation vector (3x1)
+        draw_camera(ax, R, T, label=f"Cam {idx}")
+    
+    # Add labels and show
+    ax.set_xlabel('X axis')
+    ax.set_ylabel('Y axis')
+    ax.set_zlabel('Z axis')
+    ax.legend()
+    plt.show(block=True)
 
 def get_cameras_npz_v1(PATH_TO_SAVE_CAMERAS_NPZ):
 
@@ -64,6 +134,9 @@ def get_cameras_npz_v1(PATH_TO_SAVE_CAMERAS_NPZ):
 
         # Append the new extrinsic matrix to the list
         RT_w2c_mats.append(RT_w2c_mat_i)
+
+    # Visualize the camera positions
+    visualize_camera_positions(RT_w2c_mats)
 
     # Compute the projection matrices for all views by multiplying the intrinsic matrix 'K'
     # with the extrinsic matrix 'RT_w2c_mats' for each view (i.e., K * [R | T])

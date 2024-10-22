@@ -4,9 +4,55 @@ import os
 from glob import glob
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import matplotlib
 matplotlib.use('TkAgg')
 import cv2
+
+def visualize_camera_positions(RT_w2c_mats, scale_factor=1000, object_position=[0, 0, 0]):
+    """
+    Visualize the position and orientation of the cameras as blue dots.
+    RT_w2c_mats: List of extrinsic matrices for each camera
+    scale_factor: Scaling factor to convert units (e.g., mm to meters)
+    object_position: The fixed position of the object (default is at the origin)
+    """
+    # Convert object position to meters (divide by scale_factor)
+    object_position = np.array(object_position) / scale_factor
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    
+    # Get the range of the camera positions for dynamic axis scaling
+    all_positions = np.array([RT[:3, 3] for RT in RT_w2c_mats]) / scale_factor  # Convert camera positions to meters
+    max_range = np.ptp(all_positions, axis=0).max() * 1.1  # Get peak-to-peak range
+
+    # Set up plot limits dynamically based on the camera positions
+    mid_x = (all_positions[:, 0].min() + all_positions[:, 0].max()) * 0.5
+    mid_y = (all_positions[:, 1].min() + all_positions[:, 1].max()) * 0.5
+    mid_z = (all_positions[:, 2].min() + all_positions[:, 2].max()) * 0.5
+
+    # ax.set_xlim(mid_x - max_range / 2, mid_x + max_range / 2)
+    # ax.set_ylim(mid_y - max_range / 2, mid_y + max_range / 2)
+    # ax.set_zlim(mid_z - max_range / 2, mid_z + max_range / 2)
+
+    # Plot the object at the center (fixed object)
+    ax.scatter(object_position[0], object_position[1], object_position[2], c='r', marker='o', s=100, label="Object")
+
+    # Plot each camera as a blue dot in the list
+    for idx, RT in enumerate(RT_w2c_mats):
+        T = RT[:3, 3] / scale_factor   # Extract the translation vector (3x1) and convert to meters
+        ax.scatter(T[0], T[1], T[2], c='b', marker='o', s=50, label=f"Cam {idx}" if idx == 0 else "")  # Label only the first camera for the legend
+    
+    # Add labels and show
+    ax.set_xlabel('X axis (m)')
+    ax.set_ylabel('Y axis (m)')
+    ax.set_zlabel('Z axis (m)')
+
+    # Set the viewing angle
+    ax.view_init(elev=20, azim=-60)
+
+    ax.legend()
+    plt.show(block=True)
 
 # Helper function to retrieve all image file paths (mask images) from a given directory.
 def glob_imgs(path):
@@ -74,6 +120,9 @@ def get_cameras_npz_pt1_from_Calib_Results_mat(PATH_TO_CALIB_RESULTS_MAT, PATH_T
     # Concatenate each rotation matrix (3x3) with its corresponding translation vector (3x1) horizontally
     # Then, append the homogeneous bottom row to create a 4x4 extrinsic matrix for each view
     RT_w2c_mats = [np.concatenate([np.concatenate([R_w2c_mats[idx], T_w2c_mats[idx]], axis=1), bottom], axis=0) for idx in range(n_views)]
+
+    # Visualize the camera positions, passing the scale_factor for proper unit scaling
+    visualize_camera_positions(RT_w2c_mats, scale_factor=1000) # 1000 because they are working in millimeters and the draw will be done in meters
 
     # Compute the projection matrices for all views by multiplying the intrinsic matrix 'K'
     # with the extrinsic matrix 'RT_w2c_mats' for each view (i.e., K * [R | T])
@@ -239,8 +288,7 @@ def get_normalization_function(Ps,mask_points_all,number_of_normalization_points
     normalization[2, 2] = scale
     return normalization,all_Xs
 
-def preprocess_cameras(PATH_TO_SAVE_CAMERAS_NPZ, source_dir):
-    number_of_normalization_points = 100
+def preprocess_cameras(PATH_TO_SAVE_CAMERAS_NPZ, source_dir, number_of_normalization_points):
     cameras_filename = "cameras_v1"
     cameras_out_filename = "cameras_v2"
     # Define the directory containing the mask images.
@@ -283,5 +331,5 @@ if __name__ == "__main__":
     # It can be done by running the example:
     # python preprocess/preprocess_cameras.py --source_dir C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG
     # Where it should find the cameras.npz file generated previously in this script with the function get_cameras_npz
-    source_dir = PATH_TO_SAVE_CAMERAS_NPZ
-    preprocess_cameras(PATH_TO_SAVE_CAMERAS_NPZ, source_dir)
+    source_dir = PATH_TO_SAVE_CAMERAS_NPZ #r"C:/Users/Deivid/OneDrive - Université de Bourgogne/3D/in/head_cs_3D_in_011"#
+    preprocess_cameras(PATH_TO_SAVE_CAMERAS_NPZ, source_dir, number_of_normalization_points = 100)

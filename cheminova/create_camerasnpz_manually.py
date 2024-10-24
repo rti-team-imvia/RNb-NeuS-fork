@@ -3,6 +3,9 @@ import os
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import matplotlib
+import matplotlib.image as mpimg
+from glob import glob
+import cv2
 matplotlib.use('TkAgg')
 
 # Helper function to retrieve all image file paths (mask images) from a given directory.
@@ -415,13 +418,22 @@ def update_camerasnpz_v1_with_bear_scale_matrix(cameras_v1_path):
     num_cameras = len([key for key in cameras.keys() if key.startswith('world_mat_')])
     
     # Define the scale matrix to be applied to each camera
+    # # Scale bearPNG
+    # scale_mat = np.array([
+    #     [84.4945297241211, 0, 0, 87.13922119140625],
+    #     [0, 84.4945297241211, 0, 83.05925750732422],
+    #     [0, 0, 84.4945297241211, 36.135494232177734],
+    #     [0, 0, 0, 1]
+    # ])
+
+    # Scale Identity
     scale_mat = np.array([
-        [84.4945297241211, 0, 0, 87.13922119140625],
-        [0, 84.4945297241211, 0, 83.05925750732422],
-        [0, 0, 84.4945297241211, 36.135494232177734],
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
         [0, 0, 0, 1]
     ])
-    
+
     # Create a dictionary to store the new data (both world and scale matrices)
     updated_mats = {}
     
@@ -441,10 +453,10 @@ def update_camerasnpz_v1_with_bear_scale_matrix(cameras_v1_path):
     print(f"Updated .npz file saved to {output_file}")    
 
 if __name__ == "__main__":
-    PATH_TO_SAVE_CAMERAS_NPZ = r"C:/Users/Deivid/OneDrive - Université de Bourgogne/3D/in/head_cs_3D_in_011"
+    PATH_TO_SAVE_CAMERAS_NPZ = r"C:\Users\Deivid\OneDrive - Université de Bourgogne\3D\in\head_cs_3D_in_014"
     
     # Pass 'X', 'Y', or 'Z' to rotate around a different axis
-    get_cameras_npz_v1(PATH_TO_SAVE_CAMERAS_NPZ, rotation_axis='Y', unit='millimeters')  # Change 'Y' to 'X' or 'Z' and 'meters' to 'centimeters' or 'millimeters'
+    get_cameras_npz_v1(PATH_TO_SAVE_CAMERAS_NPZ, rotation_axis='X', unit='millimeters')  # Change 'Y' to 'X' or 'Z' and 'meters' to 'centimeters' or 'millimeters'
 
     source_dir = PATH_TO_SAVE_CAMERAS_NPZ
     update_camerasnpz_v1_with_bear_scale_matrix(PATH_TO_SAVE_CAMERAS_NPZ)

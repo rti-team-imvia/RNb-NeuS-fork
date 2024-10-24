@@ -9,136 +9,35 @@ import matplotlib
 matplotlib.use('TkAgg')
 import cv2
 
-def visualize_camera_positions(RT_w2c_mats, scale_factor=1000, object_position=[0, 0, 0]):
-    """
-    Visualize the position and orientation of the cameras as blue dots.
-    RT_w2c_mats: List of extrinsic matrices for each camera
-    scale_factor: Scaling factor to convert units (e.g., mm to meters)
-    object_position: The fixed position of the object (default is at the origin)
-    """
-    # Convert object position to meters (divide by scale_factor)
-    object_position = np.array(object_position) / scale_factor
+def preprocess_cameras(PATH_TO_SAVE_CAMERAS_NPZ, source_dir, number_of_normalization_points):
+    cameras_filename = "cameras_v1"
+    cameras_out_filename = "cameras_v2"
+    # Define the directory containing the mask images.
+    masks_dir = '{0}/mask'.format(source_dir) # C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG/mask
+    # Load the camera data from the cameras file.
+    cameras = np.load('{0}/{1}.npz'.format(source_dir, cameras_filename)) # 'C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG/cameras.npz'
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    # Get the mask points and binary mask images from the masks directory.
+    mask_points_all, masks_all = get_all_mask_points(masks_dir) #plt.figure();plt.imshow(masks_all[0]);plt.show(block=True)
+    number_of_cameras = len(masks_all) # Get the number of cameras. plt.figure();plt.show(masks_all[0]);plt.show(block=True)
+    Ps = get_Ps(cameras, number_of_cameras) # [20,3,4] # Extract the projection matrices (P matrices) for each camera. 
+
+    # Compute the normalization matrix and 3D points for the object.
+    normalization, all_Xs = get_normalization_function(Ps, mask_points_all, number_of_normalization_points, number_of_cameras, masks_all)
     
-    # Get the range of the camera positions for dynamic axis scaling
-    all_positions = np.array([RT[:3, 3] for RT in RT_w2c_mats]) / scale_factor  # Convert camera positions to meters
-    max_range = np.ptp(all_positions, axis=0).max() * 1.1  # Get peak-to-peak range
-
-    # Set up plot limits dynamically based on the camera positions
-    mid_x = (all_positions[:, 0].min() + all_positions[:, 0].max()) * 0.5
-    mid_y = (all_positions[:, 1].min() + all_positions[:, 1].max()) * 0.5
-    mid_z = (all_positions[:, 2].min() + all_positions[:, 2].max()) * 0.5
-
-    # ax.set_xlim(mid_x - max_range / 2, mid_x + max_range / 2)
-    # ax.set_ylim(mid_y - max_range / 2, mid_y + max_range / 2)
-    # ax.set_zlim(mid_z - max_range / 2, mid_z + max_range / 2)
-
-    # Plot the object at the center (fixed object)
-    ax.scatter(object_position[0], object_position[1], object_position[2], c='r', marker='o', s=100, label="Object")
-
-    # Plot each camera as a blue dot in the list
-    for idx, RT in enumerate(RT_w2c_mats):
-        T = RT[:3, 3] / scale_factor   # Extract the translation vector (3x1) and convert to meters
-        ax.scatter(T[0], T[1], T[2], c='b', marker='o', s=50, label=f"Cam {idx}" if idx == 0 else "")  # Label only the first camera for the legend
+    # Create a new dictionary to store the normalized camera data.
+    cameras_new = {}
+    for i in range(number_of_cameras):
+        # Save the normalization matrix (scale and translation) for each camera.
+        cameras_new['scale_mat_%d' % i] = normalization
+        # Save the world-to-camera transformation matrix for each camera, adding an extra row for homogeneity.
+        cameras_new['world_mat_%d' % i] = np.concatenate((Ps[i], np.array([[0, 0, 0, 1.0]])), axis=0).astype(np.float32)
     
-    # Add labels and show
-    ax.set_xlabel('X axis (m)')
-    ax.set_ylabel('Y axis (m)')
-    ax.set_zlabel('Z axis (m)')
-
-    # Set the viewing angle
-    ax.view_init(elev=20, azim=-60)
-
-    ax.legend()
-    plt.show(block=True)
-
-# Helper function to retrieve all image file paths (mask images) from a given directory.
-def glob_imgs(path):
-    imgs = []
-    # Searching for files with common image extensions.
-    for ext in ['*.png', '*.jpg', '*.JPEG', '*.JPG']:
-        imgs.extend(glob(os.path.join(path, ext)))  # Add files found with the given extension.
-    return imgs
-
-# GPUT: Computes the fundamental matrix F that transforms points from image of camera 2 to lines in the image of camera 1.
-# Authors: #Gets the fundamental matrix that transforms points from the image of camera 2, to a line in the image of camera 1
-def get_fundamental_matrix(P_1, P_2):
-    # Calculate the camera center of P_2 by taking the last row of the SVD (singular value decomposition) of P_2.
-    P_2_center = np.linalg.svd(P_2)[-1][-1, :]
-    # Compute the epipole in camera 1 by projecting the camera center of P_2 onto P_1.
-    epipole = P_1 @ P_2_center
-    # Create a skew-symmetric matrix for the epipole, used to compute the cross-product.
-    epipole_cross = np.zeros((3, 3))
-    epipole_cross[0, 1] = -epipole[2]
-    epipole_cross[1, 0] = epipole[2]
-
-    epipole_cross[0, 2] = epipole[1]
-    epipole_cross[2, 0] = -epipole[1]
+    # Save the updated camera data to a new file.
+    np.savez('{0}/{1}.npz'.format(source_dir, cameras_out_filename), **cameras_new)
     
-    epipole_cross[1, 2] = -epipole[0]
-    epipole_cross[2, 1] = epipole[0]
-    
-    # Compute the fundamental matrix F = [e]_x P1 pinv(P2)
-    F = epipole_cross @ P_1 @ np.linalg.pinv(P_2)
-    return F
-
-# GPT: Computes the fundamental matrices for all pairs of cameras, mapping points from camera 0 to epipolar lines in other cameras.
-# get all fundamental matrices that trasform points from camera 0 to lines in Ps
-def get_fundamental_matrices(P_0, Ps):
-    Fs = []
-    for i in range(0, Ps.shape[0]):
-        # Compute the fundamental matrix between camera 0 and camera i.
-        F_i0 = get_fundamental_matrix(Ps[i], P_0)
-        Fs.append(F_i0)
-    return np.array(Fs)
-
-def get_cameras_npz_pt1_from_Calib_Results_mat(PATH_TO_CALIB_RESULTS_MAT, PATH_TO_SAVE_CAMERAS_NPZ):
-
-    # Define the number of camera views (20 different views for the bear object)
-    n_views = 20
-
-    # Load the calibration results from a .mat file containing intrinsic and extrinsic parameters
-    camera_dict = scipy.io.loadmat(PATH_TO_CALIB_RESULTS_MAT)
-
-    # Create a homogeneous row [0, 0, 0, 1] to be appended to matrices later to convert to 4x4 format
-    bottom = np.array([0, 0, 0, 1], dtype=float).reshape((1, 4))
-
-    # Create the intrinsic matrix 'K' by extracting 'KK' (3x3 camera matrix) from the loaded data
-    # Append a column of zeros to the right of the 3x3 'KK' to make it a 3x4 matrix
-    # Then, append the 'bottom' row to make it a 4x4 matrix
-    K = np.concatenate([np.concatenate([camera_dict['KK'], np.zeros((3, 1), dtype=float)], axis=1), bottom], axis=0)
-
-    # Extract rotation matrices ('Rc_X' fields) for all views, converting them to float32 for computation
-    R_w2c_mats = [camera_dict[f"Rc_{idx+1}"].astype(np.float32) for idx in range(n_views)]
-    
-    # Extract translation vectors ('Tc_X' fields) for all views, also converting to float32
-    T_w2c_mats = [camera_dict[f"Tc_{idx+1}"].astype(np.float32) for idx in range(n_views)]
-
-    # Combine the rotation and translation matrices into full extrinsic matrices (4x4)
-    # Concatenate each rotation matrix (3x3) with its corresponding translation vector (3x1) horizontally
-    # Then, append the homogeneous bottom row to create a 4x4 extrinsic matrix for each view
-    RT_w2c_mats = [np.concatenate([np.concatenate([R_w2c_mats[idx], T_w2c_mats[idx]], axis=1), bottom], axis=0) for idx in range(n_views)]
-
-    # Visualize the camera positions, passing the scale_factor for proper unit scaling
-    visualize_camera_positions(RT_w2c_mats, scale_factor=1000) # 1000 because they are working in millimeters and the draw will be done in meters
-
-    # Compute the projection matrices for all views by multiplying the intrinsic matrix 'K'
-    # with the extrinsic matrix 'RT_w2c_mats' for each view (i.e., K * [R | T])
-    proj_mats = [K @ RT_w2c_mats[idx] for idx in range(n_views)] # Dimensions matrix (20, 4, 4)
-
-    # Create an empty dictionary to store the projection matrices with specific keys
-    proj_dict = {}
-
-    # Loop through each view index and store the corresponding projection matrix in the dictionary
-    # The key for each projection matrix will be in the format 'world_mat_X' where X is the view index
-    for i in range(n_views):  # Use 'range(n_views)' to correctly iterate over all view indices
-        proj_dict[f"world_mat_{i}"] = proj_mats[i]
-
-    # Save the projection matrices to a .npz file named 'cameras.npz'
-    # The **proj_dict unpacks the dictionary, saving each projection matrix as a separate array in the .npz file
-    np.savez(os.path.join(PATH_TO_SAVE_CAMERAS_NPZ, "cameras_v1.npz"), **proj_dict)
+    print(normalization)
+    print('--------------------------------------------------------')
 
 def get_all_mask_points(masks_dir):
     # Use the helper function 'glob_imgs' to retrieve all image files (masks) from the specified directory.
@@ -177,42 +76,6 @@ def get_Ps(cameras, number_of_cameras):
         P = cameras['world_mat_%d' % i][:3, :].astype(np.float64)
         Ps.append(P)
     return np.array(Ps)
-
-# GPT:Computes the minimum and maximum possible depth of a point (curx, cury) in the reference image,
-# by considering its projection in a second image (camera j) and the mask (silhouette) for camera j.
-# Authors: Given a point (curx,cury) in image 0, get the  maximum and minimum
-# possible depth of the point, considering the second image silhouette (index j)
-def get_min_max_d(curx, cury, P_j, silhouette_j, P_0, Fj0, j):
-    # Use the fundamental matrix to map the point (curx, cury) to a line in the second image (epipolar line).
-    cur_l_1 = Fj0 @ np.array([curx, cury, 1.0]).astype(np.float32)
-    cur_l_1 = cur_l_1 / np.linalg.norm(cur_l_1[:2])  # Normalize the line equation.
-
-    # Calculate distances from all points in the silhouette of camera j to the epipolar line.
-    dists = np.abs(silhouette_j.T @ cur_l_1)
-    # Select the points in the silhouette that are close to the epipolar line (within a threshold of 0.7).
-    relevant_matching_points_1 = silhouette_j[:, dists < 0.7]
-    
-    # If no relevant points found, return (0.0, 0.0) as min/max depth.
-    if relevant_matching_points_1.shape[1] == 0:
-        return (0.0, 0.0)
-    # Perform triangulation to compute the 3D coordinates of the relevant matching points.
-    X = cv2.triangulatePoints(P_0, P_j, np.tile(np.array([curx, cury]).astype(np.float32),
-                                                (relevant_matching_points_1.shape[1], 1)).T,
-                              relevant_matching_points_1[:2, :])
-    
-    depths = P_0[2] @ (X / X[3]) # Project the triangulated points back into camera 0 to compute their depth.
-    reldepth = depths >= 0 # Filter out points with negative depth (invalid points).
-    depths = depths[reldepth]
-    
-    # If no valid depth values are found, return (0.0, 0.0).
-    if depths.shape[0] == 0:
-        return (0.0, 0.0)
-
-    # Compute the minimum and maximum depth among the valid points.
-    min_depth = depths.min()
-    max_depth = depths.max()
-
-    return min_depth, max_depth
 
 # the normaliztion script needs a set of 2D object masks and camera projection matrices (P_i=K_i[R_i |t_i] where [R_i |t_i] is world to camera transformation)
 def get_normalization_function(Ps,mask_points_all,number_of_normalization_points,number_of_cameras,masks_all):
@@ -288,35 +151,173 @@ def get_normalization_function(Ps,mask_points_all,number_of_normalization_points
     normalization[2, 2] = scale
     return normalization,all_Xs
 
-def preprocess_cameras(PATH_TO_SAVE_CAMERAS_NPZ, source_dir, number_of_normalization_points):
-    cameras_filename = "cameras_v1"
-    cameras_out_filename = "cameras_v2"
-    # Define the directory containing the mask images.
-    masks_dir = '{0}/mask'.format(source_dir) # C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG/mask
-    # Load the camera data from the cameras file.
-    cameras = np.load('{0}/{1}.npz'.format(source_dir, cameras_filename)) # 'C:/Users/Deivid/Documents/repos/RNb-NeuS-fork/DiLiGenT-MV/bearPNG/cameras.npz'
+# GPT: Computes the fundamental matrices for all pairs of cameras, mapping points from camera 0 to epipolar lines in other cameras.
+# get all fundamental matrices that trasform points from camera 0 to lines in Ps
+def get_fundamental_matrices(P_0, Ps):
+    Fs = []
+    for i in range(0, Ps.shape[0]):
+        # Compute the fundamental matrix between camera 0 and camera i.
+        F_i0 = get_fundamental_matrix(Ps[i], P_0)
+        Fs.append(F_i0)
+    return np.array(Fs)
 
-    # Get the mask points and binary mask images from the masks directory.
-    mask_points_all, masks_all = get_all_mask_points(masks_dir) #plt.figure();plt.imshow(masks_all[0]);plt.show(block=True)
-    number_of_cameras = len(masks_all) # Get the number of cameras. plt.figure();plt.show(masks_all[0]);plt.show(block=True)
-    Ps = get_Ps(cameras, number_of_cameras) # [20,3,4] # Extract the projection matrices (P matrices) for each camera. 
+# GPUT: Computes the fundamental matrix F that transforms points from image of camera 2 to lines in the image of camera 1.
+# Authors: #Gets the fundamental matrix that transforms points from the image of camera 2, to a line in the image of camera 1
+def get_fundamental_matrix(P_1, P_2):
+    # Calculate the camera center of P_2 by taking the last row of the SVD (singular value decomposition) of P_2.
+    P_2_center = np.linalg.svd(P_2)[-1][-1, :]
+    # Compute the epipole in camera 1 by projecting the camera center of P_2 onto P_1.
+    epipole = P_1 @ P_2_center
+    # Create a skew-symmetric matrix for the epipole, used to compute the cross-product.
+    epipole_cross = np.zeros((3, 3))
+    epipole_cross[0, 1] = -epipole[2]
+    epipole_cross[1, 0] = epipole[2]
 
-    # Compute the normalization matrix and 3D points for the object.
-    normalization, all_Xs = get_normalization_function(Ps, mask_points_all, number_of_normalization_points, number_of_cameras, masks_all)
+    epipole_cross[0, 2] = epipole[1]
+    epipole_cross[2, 0] = -epipole[1]
     
-    # Create a new dictionary to store the normalized camera data.
-    cameras_new = {}
-    for i in range(number_of_cameras):
-        # Save the normalization matrix (scale and translation) for each camera.
-        cameras_new['scale_mat_%d' % i] = normalization
-        # Save the world-to-camera transformation matrix for each camera, adding an extra row for homogeneity.
-        cameras_new['world_mat_%d' % i] = np.concatenate((Ps[i], np.array([[0, 0, 0, 1.0]])), axis=0).astype(np.float32)
+    epipole_cross[1, 2] = -epipole[0]
+    epipole_cross[2, 1] = epipole[0]
     
-    # Save the updated camera data to a new file.
-    np.savez('{0}/{1}.npz'.format(source_dir, cameras_out_filename), **cameras_new)
+    # Compute the fundamental matrix F = [e]_x P1 pinv(P2)
+    F = epipole_cross @ P_1 @ np.linalg.pinv(P_2)
+    return F
+
+# GPT:Computes the minimum and maximum possible depth of a point (curx, cury) in the reference image,
+# by considering its projection in a second image (camera j) and the mask (silhouette) for camera j.
+# Authors: Given a point (curx,cury) in image 0, get the  maximum and minimum
+# possible depth of the point, considering the second image silhouette (index j)
+def get_min_max_d(curx, cury, P_j, silhouette_j, P_0, Fj0, j):
+    # Use the fundamental matrix to map the point (curx, cury) to a line in the second image (epipolar line).
+    cur_l_1 = Fj0 @ np.array([curx, cury, 1.0]).astype(np.float32)
+    cur_l_1 = cur_l_1 / np.linalg.norm(cur_l_1[:2])  # Normalize the line equation.
+
+    # Calculate distances from all points in the silhouette of camera j to the epipolar line.
+    dists = np.abs(silhouette_j.T @ cur_l_1)
+    # Select the points in the silhouette that are close to the epipolar line (within a threshold of 0.7).
+    relevant_matching_points_1 = silhouette_j[:, dists < 0.7]
     
-    print(normalization)
-    print('--------------------------------------------------------')
+    # If no relevant points found, return (0.0, 0.0) as min/max depth.
+    if relevant_matching_points_1.shape[1] == 0:
+        return (0.0, 0.0)
+    # Perform triangulation to compute the 3D coordinates of the relevant matching points.
+    X = cv2.triangulatePoints(P_0, P_j, np.tile(np.array([curx, cury]).astype(np.float32),
+                                                (relevant_matching_points_1.shape[1], 1)).T,
+                              relevant_matching_points_1[:2, :])
+    
+    depths = P_0[2] @ (X / X[3]) # Project the triangulated points back into camera 0 to compute their depth.
+    reldepth = depths >= 0 # Filter out points with negative depth (invalid points).
+    depths = depths[reldepth]
+    
+    # If no valid depth values are found, return (0.0, 0.0).
+    if depths.shape[0] == 0:
+        return (0.0, 0.0)
+
+    # Compute the minimum and maximum depth among the valid points.
+    min_depth = depths.min()
+    max_depth = depths.max()
+
+    return min_depth, max_depth
+
+# Helper function to retrieve all image file paths (mask images) from a given directory.
+def glob_imgs(path):
+    imgs = []
+    # Searching for files with common image extensions.
+    for ext in ['*.png', '*.jpg', '*.JPEG', '*.JPG']:
+        imgs.extend(glob(os.path.join(path, ext)))  # Add files found with the given extension.
+    return imgs
+
+def visualize_camera_positions(RT_w2c_mats, scale_factor=1000, object_position=[0, 0, 0]):
+    """
+    Visualize the position and orientation of the cameras as blue dots.
+    RT_w2c_mats: List of extrinsic matrices for each camera
+    scale_factor: Scaling factor to convert units (e.g., mm to meters)
+    object_position: The fixed position of the object (default is at the origin)
+    """
+    # Convert object position to meters (divide by scale_factor)
+    object_position = np.array(object_position) / scale_factor
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    
+    # Get the range of the camera positions for dynamic axis scaling
+    all_positions = np.array([RT[:3, 3] for RT in RT_w2c_mats]) / scale_factor  # Convert camera positions to meters
+    max_range = np.ptp(all_positions, axis=0).max() * 1.1  # Get peak-to-peak range
+
+    # Set up plot limits dynamically based on the camera positions
+    mid_x = (all_positions[:, 0].min() + all_positions[:, 0].max()) * 0.5
+    mid_y = (all_positions[:, 1].min() + all_positions[:, 1].max()) * 0.5
+    mid_z = (all_positions[:, 2].min() + all_positions[:, 2].max()) * 0.5
+
+    # ax.set_xlim(mid_x - max_range / 2, mid_x + max_range / 2)
+    # ax.set_ylim(mid_y - max_range / 2, mid_y + max_range / 2)
+    # ax.set_zlim(mid_z - max_range / 2, mid_z + max_range / 2)
+
+    # Plot the object at the center (fixed object)
+    ax.scatter(object_position[0], object_position[1], object_position[2], c='r', marker='o', s=100, label="Object")
+
+    # Plot each camera as a blue dot in the list
+    for idx, RT in enumerate(RT_w2c_mats):
+        T = RT[:3, 3] / scale_factor   # Extract the translation vector (3x1) and convert to meters
+        ax.scatter(T[0], T[1], T[2], c='b', marker='o', s=50, label=f"Cam {idx}" if idx == 0 else "")  # Label only the first camera for the legend
+    
+    # Add labels and show
+    ax.set_xlabel('X axis (m)')
+    ax.set_ylabel('Y axis (m)')
+    ax.set_zlabel('Z axis (m)')
+
+    # Set the viewing angle
+    ax.view_init(elev=20, azim=-60)
+
+    ax.legend()
+    plt.show(block=True)
+
+def get_cameras_npz_pt1_from_Calib_Results_mat(PATH_TO_CALIB_RESULTS_MAT, PATH_TO_SAVE_CAMERAS_NPZ):
+
+    # Define the number of camera views (20 different views for the bear object)
+    n_views = 20
+
+    # Load the calibration results from a .mat file containing intrinsic and extrinsic parameters
+    camera_dict = scipy.io.loadmat(PATH_TO_CALIB_RESULTS_MAT)
+
+    # Create a homogeneous row [0, 0, 0, 1] to be appended to matrices later to convert to 4x4 format
+    bottom = np.array([0, 0, 0, 1], dtype=float).reshape((1, 4))
+
+    # Create the intrinsic matrix 'K' by extracting 'KK' (3x3 camera matrix) from the loaded data
+    # Append a column of zeros to the right of the 3x3 'KK' to make it a 3x4 matrix
+    # Then, append the 'bottom' row to make it a 4x4 matrix
+    K = np.concatenate([np.concatenate([camera_dict['KK'], np.zeros((3, 1), dtype=float)], axis=1), bottom], axis=0)
+
+    # Extract rotation matrices ('Rc_X' fields) for all views, converting them to float32 for computation
+    R_w2c_mats = [camera_dict[f"Rc_{idx+1}"].astype(np.float32) for idx in range(n_views)]
+    
+    # Extract translation vectors ('Tc_X' fields) for all views, also converting to float32
+    T_w2c_mats = [camera_dict[f"Tc_{idx+1}"].astype(np.float32) for idx in range(n_views)]
+
+    # Combine the rotation and translation matrices into full extrinsic matrices (4x4)
+    # Concatenate each rotation matrix (3x3) with its corresponding translation vector (3x1) horizontally
+    # Then, append the homogeneous bottom row to create a 4x4 extrinsic matrix for each view
+    RT_w2c_mats = [np.concatenate([np.concatenate([R_w2c_mats[idx], T_w2c_mats[idx]], axis=1), bottom], axis=0) for idx in range(n_views)]
+
+    # Visualize the camera positions, passing the scale_factor for proper unit scaling
+    visualize_camera_positions(RT_w2c_mats, scale_factor=1000) # 1000 because they are working in millimeters and the draw will be done in meters
+
+    # Compute the projection matrices for all views by multiplying the intrinsic matrix 'K'
+    # with the extrinsic matrix 'RT_w2c_mats' for each view (i.e., K * [R | T])
+    proj_mats = [K @ RT_w2c_mats[idx] for idx in range(n_views)] # Dimensions matrix (20, 4, 4)
+
+    # Create an empty dictionary to store the projection matrices with specific keys
+    proj_dict = {}
+
+    # Loop through each view index and store the corresponding projection matrix in the dictionary
+    # The key for each projection matrix will be in the format 'world_mat_X' where X is the view index
+    for i in range(n_views):  # Use 'range(n_views)' to correctly iterate over all view indices
+        proj_dict[f"world_mat_{i}"] = proj_mats[i]
+
+    # Save the projection matrices to a .npz file named 'cameras.npz'
+    # The **proj_dict unpacks the dictionary, saving each projection matrix as a separate array in the .npz file
+    np.savez(os.path.join(PATH_TO_SAVE_CAMERAS_NPZ, "cameras_v1.npz"), **proj_dict)
+
 
 if __name__ == "__main__":
 

@@ -1,0 +1,133 @@
+#!/bin/bash
+#SBATCH --job-name=pytorch_test             # Job name
+#SBATCH --output=/work/imvia/de1450bo/repos/RNb-NeuS-fork/logs/test_output_%j.log  # Standard output
+#SBATCH --error=/work/imvia/de1450bo/repos/RNb-NeuS-fork/logs/test_error_%j.log    # Standard error
+#SBATCH --time=24:00:00                     # Time limit (24 hours)
+#SBATCH --gres=gpu:1                        # Number of GPUs
+#SBATCH --ntasks=1                          # Number of tasks
+#SBATCH --cpus-per-task=4                   # Number of CPUs per task
+#SBATCH --mem=16G                           # Memory allocation
+
+# Variable to specify the case
+CASE="head_cs_025"
+N_ITERATIONS="300000"
+BATCH_SIZE="512" #4906
+# Set the path to your configuration file
+CONF_PATH="/work/imvia/de1450bo/repos/RNb-NeuS-fork/confs/wmask_rnb.conf"
+
+# Generate the updated configuration file based on the CASE variable
+cat <<EOL > $CONF_PATH
+general {
+    base_exp_dir = /work/imvia/de1450bo/repos/RNb-NeuS-fork/data/out/${CASE}/wmask_rnb/
+    recording = [
+        ./,
+        ./models
+    ]
+}
+
+dataset {
+    data_dir = /work/imvia/de1450bo/repos/RNb-NeuS-fork/data/in/${CASE}_in/
+
+    normal_dir = normal
+    albedo_dir = albedo
+    mask_dir = mask
+
+    render_cameras_name = cameras_${CASE}.npz
+    object_cameras_name = cameras_${CASE}.npz
+}
+
+train {
+    learning_rate = 0.001#5e-4,
+    learning_rate_alpha = 0.05,
+    end_iter = ${N_ITERATIONS},#300000,
+    warm_up_iter = 10,#200000,
+
+    batch_size = ${BATCH_SIZE}#512,
+    validate_resolution_level = 4,
+    warm_up_end = 5000,
+    anneal_end = 0,
+    use_white_bkgd = False,
+
+    save_freq = 20000, # It was 10.000 before
+    val_freq = 5000,
+    val_mesh_freq = 25000,
+    report_freq = 500,
+
+    igr_weight = 0.1,
+    mask_weight = 0.1,
+}
+
+model {
+    nerf {
+        D = 8,
+        d_in = 4,
+        d_in_view = 3,
+        W = 256,
+        multires = 10,
+        multires_view = 4,
+        output_ch = 4,
+        skips=[4],
+        use_viewdirs=True
+    }
+
+    sdf_network {
+        d_out = 257,
+        d_in = 3,
+        d_hidden = 256,
+        n_layers = 8,
+        skip_in = [4],
+        multires = 6,
+        bias = 0.5,
+        scale = 1.0,
+        geometric_init = True,
+        weight_norm = True
+    }
+
+    variance_network {
+        init_val = 0.3
+    }
+
+    rendering_network {
+        d_feature = 256,
+        mode = no_view_dir,
+        d_in = 6,
+        d_out = 3,
+        d_hidden = 256,
+        n_layers = 2,
+        weight_norm = True,
+        multires_view = 4,
+        squeeze_out = True
+    }
+
+    neus_renderer {
+        n_samples = 64,
+        n_importance = 64,
+        n_outside = 0,
+        up_sample_steps = 4,    # 1 for simple coarse-to-fine sampling
+        perturb = 1.0
+    }
+}
+EOL
+
+# Load any necessary modules
+module load pytorch/2.2.2/gpu               # Load PyTorch GPU module
+
+# Set the path to your virtual environment
+VENV_PATH="/work/imvia/de1450bo/repos/RNb-NeuS-fork/.venv"
+
+# Activate the virtual environment
+source $VENV_PATH/bin/activate
+
+# Debugging information
+nvidia-smi
+which python
+python --version
+which pip
+pip list
+
+# Path for the real-time log file
+LOG_FILE="/work/imvia/de1450bo/repos/RNb-NeuS-fork/logs/${CASE}_training.log"
+
+# Run your Python script and log output in real-time
+/work/imvia/de1450bo/repos/RNb-NeuS-fork/.venv/bin/python exp_runner.py --mode train_rnb --conf $CONF_PATH --case $CASE 2>&1 | tee $LOG_FILE
+# qsub -q gpu jobs/run_job_head_cs_016.job

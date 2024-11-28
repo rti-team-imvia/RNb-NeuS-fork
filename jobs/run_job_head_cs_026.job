@@ -9,10 +9,10 @@
 #SBATCH --mem=16G                           # Memory allocation
 
 # Variable to specify the case
-CASE="bearPNG_001"
-N_ITERATIONS="1000"
-BATCH_SIZE="4906"#4906
-
+CASE="head_cs_026"
+N_ITERATIONS="300000"
+BATCH_SIZE="512" #4906
+LEARNING_RATE="5e-4" # 5e-4
 # Set the path to your configuration file
 CONF_PATH="/work/imvia/de1450bo/repos/RNb-NeuS-fork/confs/wmask_rnb.conf"
 
@@ -38,7 +38,7 @@ dataset {
 }
 
 train {
-    learning_rate = 5e-4#5e-4,
+    learning_rate = ${LEARNING_RATE}#5e-4,
     learning_rate_alpha = 0.05,
     end_iter = ${N_ITERATIONS},#300000,
     warm_up_iter = 200000,#200000,
@@ -120,6 +120,7 @@ VENV_PATH="/work/imvia/de1450bo/repos/RNb-NeuS-fork/.venv"
 source $VENV_PATH/bin/activate
 
 # Debugging information
+nvidia-smi
 which python
 python --version
 which pip
@@ -130,4 +131,4 @@ LOG_FILE="/work/imvia/de1450bo/repos/RNb-NeuS-fork/logs/${CASE}_training.log"
 
 # Run your Python script and log output in real-time
 /work/imvia/de1450bo/repos/RNb-NeuS-fork/.venv/bin/python exp_runner.py --mode train_rnb --conf $CONF_PATH --case $CASE 2>&1 | tee $LOG_FILE
-# qsub -q gpu jobs/run_job_bearPNG_001.job
+# qsub -q gpu jobs/run_job_head_cs_016.job

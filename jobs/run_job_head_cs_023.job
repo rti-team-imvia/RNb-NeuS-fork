@@ -11,7 +11,8 @@
 # Variable to specify the case
 CASE="head_cs_023"
 N_ITERATIONS="300000"
-BATCH_SIZE="2048" #4906
+BATCH_SIZE="512" #4906
+LEARNING_RATE="5e-4" # 5e-4
 # Set the path to your configuration file
 CONF_PATH="/work/imvia/de1450bo/repos/RNb-NeuS-fork/confs/wmask_rnb.conf"
 
@@ -37,10 +38,10 @@ dataset {
 }
 
 train {
-    learning_rate = 0.001#5e-4,
+    learning_rate = ${LEARNING_RATE}#5e-4,
     learning_rate_alpha = 0.05,
     end_iter = ${N_ITERATIONS},#300000,
-    warm_up_iter = 10,#200000,
+    warm_up_iter = 200000,#200000,
 
     batch_size = ${BATCH_SIZE}#512,
     validate_resolution_level = 4,
@@ -119,6 +120,7 @@ VENV_PATH="/work/imvia/de1450bo/repos/RNb-NeuS-fork/.venv"
 source $VENV_PATH/bin/activate
 
 # Debugging information
+nvidia-smi
 which python
 python --version
 which pip
